@@ -1,6 +1,5 @@
 Epics-Logic
 
-This reposoitory contains all of the code for our flash flood sensors.
+This reposoitory contains all of the code for our flash flood sensor.
 
-These sensors incorporate three different monitors in order to create an 
-accurate and affordable flash flood sensor.
+This sensor incorporates three different modules that measure: rain fall, soil saturation, and water height.
