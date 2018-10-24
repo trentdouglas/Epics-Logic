@@ -1,4 +1,4 @@
-Epics-Logic
+Flash Flood Sensor
 
 This reposoitory contains all of the code for our flash flood sensor.
 
