@@ -1,79 +1,155 @@
 /*
  * Nicholas Carnival
  * Colorado School of Mines
- * Initial Date:  10/15/18 
- * Version: 1.0
+ * 10/15/18
  * 
- * Current Date:  10/24/18
- * Version 1.0
- *
  * This Sketch monitors and returns the values of soil water saturation.
  */
 
-//This sensor is basically a resistor
+//This is very ugly code, but it works
 
+//Check here to see where the sensors need to go
 
-int val = 0;              //value for storing moisture value 
+//-----Saturation Variables
+int saturationVal = 0;    //value for storing moisture value //if the soil sensor fails this is likely why!
 int soilPin = A0;         //Declare a variable for the soil moisture sensor 
 int soilPower = 7;        //Variable for Soil moisture Power
+int saturated = 600;  //moist dirt: (500, 528)    //sensor in water range: (550, 590)
 
-//sensor in water range: (550, 590)
-//moist dirt: (500, 528)
-int saturated = 500;
+//-----Flow Meter Variables
+int flowPin = 2;          //Setting the flow meter sensor yellow pin
+double flowRate;          //This will be the value that the flow meter returns
+volatile int flowCount;   //volative to ensure it updates correctly during the interrupt process
+double maxFlow = 100.0;
 
-int iterator = 0;         //this is for testing purposes allowing 
-int count = 50;            //the sensor to be shut off after 
-                          //a certain amount of data entries
+//------Depth Variables
+int depthPower = 4;       //Sets depth power to the 4 pin
+int depthPin = A1;        //
+int depthVal = 0;
+int tooDeep = 100;
+
+int iterator = 0;         //initial iteration value, leave this as 0!
+int count = 10;           //the amount of times the sensor will take readings
             
 
-int sampleDelay = 500;   //Time interval between scans, recorded in milliseconds
+int sampleDelay = 500;    //-----Time interval between scans, recorded in milliseconds
+
+//-------Setup Function-------
 
 void setup() 
 {
-  Serial.begin(9600);     // open serial over USB, this is for the "serial monitor"
+  pinMode(soilPower, OUTPUT);         //Set D7 as an OUTPUT for the soil sensor
+  digitalWrite(soilPower, LOW);       //Set to LOW so no power is flowing through the sensor
+  
+  pinMode(flowPin, INPUT);
+  attachInterrupt(0, Flow, RISING);   //Configures interrup 0 (pin 2 on the Arduino Uno) to run the function FLOW
 
-  pinMode(soilPower, OUTPUT);   //Set D7 as an OUTPUT
-  digitalWrite(soilPower, LOW);//Set to LOW so no power is flowing through the sensor
+  pinMode(depthPower, OUTPUT);          //Sets teh depth pin power
+  digitalWrite(depthPower, LOW);        //Sets to LOW so no power goes through sensor
+  Serial.begin(9600);                 // open serial over USB, this is for the "serial monitor"
 }
+
+//-------Loop Function-------
 
 void loop() 
 {
-    int currentVal = (readSoil());
 
-    if(currentVal > saturated)
-    {
-      Serial.print("High Saturation Detected: ");
-      Serial.println(currentVal);
-      //Activate a sensor or something
-    }else if (currentVal < saturated)
-    {
-      Serial.print("Saturation Level: ");
-      Serial.println(currentVal);
-    } //currentVal will never be !< or !>
-  
-//This delay will need to be changed depending on how frequently we want to scan.
+     
+    //-----Flow Meter
 
-delay(sampleDelay); //takes a reading every .. milliseconds
+      if(flowRate >= maxFlow)
+      {
+        Serial.print("High Flow Detected: ");
+        Serial.println(flowRate);
+      }
+      else if (flowRate < maxFlow)
+      {
+        flowCount = 0;                    //Resets the counter
+        interrupts();                     //Enabls interrupts on the Arduino
+        delay(1000);                      //Delays for 1 second
+        noInterrupts();                   //Disable the interrupts on the Arduino
+    
+        //Converting the flow into Litres / Minute
+        flowRate = (flowCount * 2.25);    //Take counted pulses in the last second and multiply by 2.25mL 
+        flowRate = flowRate * 60;         //Convert seconds to minutes, giving you mL / Minute
+        flowRate = flowRate / 1000;       //Convert mL to Liters, giving you Liters / Minute
 
-iterator += 1;
+        Serial.print("Flow Rate in Litres/Minute: ");
+        Serial.println(flowRate);         //Prints flowRate to Serial
+      }
 
-  if(iterator == count)
-  {
-    Serial.print("ending session");
-    delay(15);      //have to delay because failed to print entire string
-    exit(0);
-  }
-  
+
+      
+    
+    //-----Soil Saturation
+    
+      //Checks if the soil is too saturated
+      if(saturationVal > saturated)
+     {
+       Serial.print("High Saturation Detected: ");
+       Serial.println(saturationVal);
+         
+     }       //activates the sensor if the soil is not overly saturated
+     else if (saturationVal < saturated)
+     {
+        Serial.print("Saturation Level: ");
+        Serial.println(readSoil());
+     }   
+      
+    //-----Depth Sensor
+
+      if(depthVal >= tooDeep)
+      {
+        Serial.print("Depth 1 Detected");
+      }
+      else if (depthVal < tooDeep)
+      {
+        Serial.print("Depth Value: ");
+       Serial.println(readDepth());
+      }
+
+    //-----ITERATOR-----
+      delay(sampleDelay);           //takes a reading every sampleDelay milliseconds
+      iterator += 1;  
+      
+    //---------------------END THE SESSION---------------------
+     if(iterator == count)
+     {
+      Serial.print("ending session");
+      delay(40);                     //have to delay because failed to print entire string
+      exit(0);
+     }
+
+      
 }
 
-//This is a function used to get the soil moisture content
+//-----Flow Meter Function
+void Flow()
+{
+  flowCount ++;       //adds 1 to flow count
+}
+
+
+//-----Soil Saturation Function
 int readSoil()
 {
-
-    digitalWrite(soilPower, HIGH);    //turn D7 "On"
-    delay(10);                        //wait 10 milliseconds 
-    val = analogRead(soilPin);        //Read the SIG value form sensor 
-    digitalWrite(soilPower, LOW);     //turn D7 "Off"
+    
+    digitalWrite(soilPower, HIGH);          //turn D7 "On"
+    delay(10);                              //wait 10 milliseconds 
+    saturationVal = analogRead(soilPin);       //Read the SIG value form sensor 
+    digitalWrite(soilPower, LOW);           //turn D7 "Off"
        
-    return val;                       //send current moisture value
+    return saturationVal;                      //send current moisture value
 }
+
+//-----Flow Meter Function
+int readDepth()
+{
+    digitalWrite(depthPower, HIGH);          //turn D7 "On"
+    delay(10);                              //wait 10 milliseconds 
+    depthVal = analogRead(depthPin);       //Read the SIG value form sensor 
+    digitalWrite(depthPower, LOW);           //turn D7 "Off"
+       
+    return depthVal;                      //send current moisture value
+}
+
