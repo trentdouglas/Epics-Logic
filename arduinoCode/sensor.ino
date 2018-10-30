@@ -29,7 +29,7 @@ int depthVal = 0;
 int tooDeep = 100;
 
 int iterator = 0;         //initial iteration value, leave this as 0!
-int count = 10;           //the amount of times the sensor will take readings
+int count = 100;           //the amount of times the sensor will take readings
             
 
 int sampleDelay = 500;    //-----Time interval between scans, recorded in milliseconds
