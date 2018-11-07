@@ -196,3 +196,4 @@ int readDepth(int pin,int power)
        
     return val;                         //send current moisture value
 }
+
