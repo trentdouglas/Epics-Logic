@@ -20,7 +20,7 @@ int soilPower = 7;        //Variable for Soil moisture Power
 int saturationVal2 = 0;    //value for storing moisture value //if the soil sensor fails this is likely why!
 int soilPin2 = A2;         //Declare a variable for the soil moisture sensor 
 int soilPower2 = 12;        //Variable for Soil moisture Power
-
+int soilVal = 0;
 
 //-----Flow Meter Variables
 int flowPin = 2;          //Setting the flow meter sensor yellow pin
@@ -39,9 +39,9 @@ int depthPower2 = 8;      //Gives power to the 4 pin
 int depthPin2 = A3;       //Analog in pin
 int depthVal2 = 0;        //Serial return pin
 
-int tooDeep = 100;
+int tooDeep = 200;
 int iterator = 0;         //initial iteration value, leave this as 0!
-int count = 100;          //the amount of times the sensor will take readings
+int count = 1000;          //the amount of times the sensor will take readings
 int saturated = 600;      //moist dirt: (500, 528)    //sensor in water range: (550, 590)
 int sampleDelay = 500;    //-----Time interval between scans, recorded in milliseconds
 
@@ -58,11 +58,12 @@ void setup()
   pinMode(flowPin, INPUT);
   attachInterrupt(0, Flow, RISING);   //Configures interrup 0 (pin 2 on the Arduino Uno) to run the function FLOW
   
-  pinMode(depthPower2, OUTPUT);
-  digitalWrite(depthPower2, LOW);
   
   pinMode(depthPower, OUTPUT);          //Sets teh depth pin power
   digitalWrite(depthPower, LOW);        //Sets to LOW so no power goes through sensor
+
+  pinMode(depthPower2, OUTPUT);
+  digitalWrite(depthPower2, LOW);
   
   Serial.begin(9600);                 // open serial over USB, this is for the "serial monitor"
 }
@@ -119,9 +120,9 @@ void loop()
         saturationVal = readSoil(soilPin, soilPower);
         Serial.println(saturationVal);
      }   
-     else if(saturationVal2 < saturated)
+     if(saturationVal2 < saturated)
      {
-        Serial.print("Saturation Level: ");
+        Serial.print("Saturation Level 2: ");
         saturationVal2 = readSoil(soilPin2, soilPower2);
         Serial.println(saturationVal2);
      }
@@ -131,11 +132,13 @@ void loop()
       if(depthVal >= tooDeep)
       {
         Serial.print("Depth 1 Detected: ");
+        depthVal = readDepth(depthPin, depthPower);
         Serial.println(depthVal);
       }
       if(depthVal2 >= tooDeep)
       {
         Serial.print("Depth 2 Detected: ");
+        depthVal2 = readDepth(depthPin2, depthPower2);
         Serial.println(depthVal2);
       }
       else if (depthVal < tooDeep)
@@ -145,7 +148,7 @@ void loop()
         Serial.println(depthVal);
         
       }
-      else if (depthVal2 < tooDeep)
+      if (depthVal2 < tooDeep)
       {
         Serial.print("Depth Value 2: ");
         depthVal2 = readDepth(depthPin2, depthPower2);
@@ -153,6 +156,7 @@ void loop()
       }
 
     //-----ITERATOR-----
+      Serial.println();
       delay(sampleDelay);           //takes a reading every sampleDelay milliseconds
       iterator += 1;  
       
@@ -180,20 +184,19 @@ int readSoil(int pin,int power)
     
     digitalWrite(power, HIGH);          //turn D7 "On"
     delay(10);                          //wait 10 milliseconds 
-    val = analogRead(pin);              //Read the SIG value form sensor 
+    soilVal = analogRead(pin);              //Read the SIG value form sensor 
     digitalWrite(power, LOW);           //turn D7 "Off"
        
-    return val;                         //send current moisture value
+    return soilVal;                         //send current moisture value
 }
 
 //-----Flow Meter Function
 int readDepth(int pin,int power)
 {
     digitalWrite(power, HIGH);         
-    delay(10);                          //wait 10 milliseconds 
-    depthVal = analogRead(pin);         //Read the SIG value form sensor 
+    delay(15);                          //wait 10 milliseconds 
+    int tempVal = analogRead(pin);         //Read the SIG value form sensor 
     digitalWrite(power, LOW);           //turn D7 "Off"
        
-    return val;                         //send current moisture value
+    return tempVal;                         //send current moisture value
 }
-
